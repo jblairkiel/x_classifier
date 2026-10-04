@@ -9,7 +9,7 @@ BACKUP_DIR ?= backups
 STAMP := $(shell date -u +%Y%m%d-%H%M%S)
 SESSION ?= secrets/x_storage_state.json
 
-.PHONY: help build up down restart logs ps backup restore push-session hash-password train train-gpu eval \
+.PHONY: help build up down restart logs ps backup restore push-session push-model hash-password train train-gpu eval \
         classify features status resume test local-up local-down
 
 help: ## Show targets
@@ -64,6 +64,13 @@ train: ## Train on CPU in the opt-in train container (ARGS="--epochs 2 ...")
 
 train-gpu: ## Train on an NVIDIA GPU (needs NVIDIA Container Toolkit)
 	$(GPU_COMPOSE) --profile train run --rm train train --device cuda $(ARGS)
+
+push-model: ## Copy a locally trained checkpoint into the models volume (VERSION=v..., MODELS=./models)
+	@test -n "$(VERSION)" && test -f "$(or $(MODELS),models)/$(VERSION)/COMPLETE" || \
+	  (echo "usage: make push-model VERSION=v... [MODELS=./models]  (dir must contain COMPLETE)" && exit 1)
+	tar -C "$(or $(MODELS),models)" -cf - "$(VERSION)" | \
+	  $(COMPOSE) --profile ops run --rm -T --entrypoint sh ops -c 'tar -C /models -xf - && ls /models'
+	@echo "Done. With MODEL_VERSION=latest the worker uses the newest checkpoint; press Reclassify on the Model page."
 
 eval: ## Evaluate a checkpoint (ARGS="--version v...")
 	$(COMPOSE) --profile train run --rm train eval $(ARGS)

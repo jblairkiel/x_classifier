@@ -7,6 +7,7 @@ import pytest
 from tl.config import Settings, reset_settings_cache
 
 FIXTURES = Path(__file__).parent / "fixtures"
+PASSWORD = "correct horse battery staple"
 
 
 @pytest.fixture
@@ -28,3 +29,25 @@ def fixture_html():
         return (FIXTURES / name).read_text(encoding="utf-8")
 
     return load
+
+
+@pytest.fixture
+def app_settings(settings):
+    return settings.__class__(**{
+        **settings.__dict__,
+        "admin_password_hash": _pw_hash(),
+        "session_secret": "x" * 48,
+        "login_max_attempts": 3,
+        "login_global_max_attempts": 100,
+    })
+
+
+_HASH_CACHE: list[str] = []
+
+
+def _pw_hash() -> str:
+    if not _HASH_CACHE:
+        from tl.web.auth import hash_password
+
+        _HASH_CACHE.append(hash_password(PASSWORD))
+    return _HASH_CACHE[0]

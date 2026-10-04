@@ -3,7 +3,7 @@ import pytest
 from tl.db import session
 from tl.db import queries as Q
 from tl.scraper.extract import extract_page
-from tests.test_web_auth import csrf_from, login, app_settings  # noqa: F401  (fixture reuse)
+from tests.test_web_auth import csrf_from, login
 
 
 @pytest.fixture

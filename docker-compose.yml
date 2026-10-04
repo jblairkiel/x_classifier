@@ -48,6 +48,7 @@ services:
       dockerfile: docker/worker.Dockerfile
       args:
         WITH_TORCH: ${WORKER_WITH_TORCH:-1}
+        TORCH_VERSION: ${TORCH_VERSION:-2.14.1}
     image: tl-ai-detector-worker:${TL_IMAGE_TAG:-latest}
     <<: *hardening
     env_file: .env
@@ -105,6 +106,7 @@ services:
       context: .
       dockerfile: docker/train.Dockerfile
       args:
+        TORCH_VERSION: ${TORCH_VERSION:-2.14.1}
         TORCH_INDEX_URL: ${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cpu}
     image: tl-ai-detector-train:${TL_IMAGE_TAG:-latest}
     env_file: .env

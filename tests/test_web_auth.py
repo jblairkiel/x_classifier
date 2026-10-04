@@ -6,22 +6,10 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from tl.web.auth import hash_password, safe_next
+from tests.conftest import PASSWORD
+from tl.web.auth import safe_next
 
-PASSWORD = "correct horse battery staple"
-PW_HASH = hash_password(PASSWORD)
 PUBLIC = {"/healthz", "/login", "/robots.txt"}
-
-
-@pytest.fixture
-def app_settings(settings):
-    return settings.__class__(**{
-        **settings.__dict__,
-        "admin_password_hash": PW_HASH,
-        "session_secret": "x" * 48,
-        "login_max_attempts": 3,
-        "login_global_max_attempts": 100,
-    })
 
 
 @pytest.fixture
