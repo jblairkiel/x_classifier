@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "_macros.html" import tweet_card %}
+{% block content %}
+<h1>Dashboard</h1>
+<section class="grid">
+  <div class="card">
+    <h2>Scraper</h2>
+    <p><span class="status status-{{ state.status }}">{{ state.status }}</span> {% if state.reason %}<span class="muted small">{{ state.reason }}</span>{% endif %}</p>
+    <dl>
+      <dt>Last run</dt><dd>{{ state.last_run_at | dt }}</dd>
+      <dt>Next scheduled</dt><dd>{% if settings.scrape_enabled %}{{ state.next_run_at | dt }}{% else %}schedule disabled{% endif %}</dd>
+      <dt>Worker heartbeat</dt><dd>{{ state.worker_heartbeat_at | dt }}</dd>
+      <dt>Session file</dt><dd>{% if state.session_file_ok == 1 %}present{% elif state.session_file_ok == 0 %}<span class="error">missing</span>{% else %}unknown{% endif %}</dd>
+      <dt>Read in last 24h</dt><dd>{{ seen_24h }} / {{ settings.max_tweets_per_day }} (cap {{ settings.max_tweets_per_run }}/run)</dd>
+      <dt>Timeline</dt><dd>{{ settings.timeline }}</dd>
+    </dl>
+    <div class="actions">
+      {% if state.status in ("paused", "error") %}
+      <form method="post" action="/scraper/resume"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="primary">Resume</button></form>
+      {% else %}
+      <form method="post" action="/scraper/pause"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button>Pause</button></form>
+      {% endif %}
+      <form method="post" action="/jobs/scrape"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button {% if state.status != "idle" %}disabled{% endif %}>Run scrape now</button></form>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Counts</h2>
+    <dl>
+      <dt>Tweets</dt><dd>{{ counts.tweets }} <span class="muted small">({{ counts.tweets_today }} new today)</span></dd>
+      <dt>Accounts</dt><dd>{{ counts.accounts }}</dd>
+      <dt>Hand labels</dt><dd>{{ counts.manual_labels }} <span class="muted small">({{ counts.unlabeled }} unlabeled)</span></dd>
+      <dt>Training samples</dt><dd>{{ counts.samples }}</dd>
+      <dt>Model</dt><dd>{% if version %}<a href="/model">{{ version }}</a>{% else %}<span class="muted">none trained yet</span>{% endif %}</dd>
+      <dt>Predictions</dt><dd>{{ counts.predictions }}</dd>
+    </dl>
+    <div class="actions">
+      <form method="post" action="/jobs/classify"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button>Classify new</button></form>
+      <form method="post" action="/jobs/features"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button>Recompute account scores</button></form>
+    </div>
+  </div>
+</section>
+
+<section class="grid">
+  <div class="card">
+    <h2>Most botlike accounts</h2>
+    {% if top_accounts %}
+    <table><thead><tr><th>Account</th><th class="num">Botlike</th><th class="num">Tweets</th></tr></thead><tbody>
+    {% for a in top_accounts %}<tr><td><a href="/accounts/{{ a.handle }}">@{{ a.handle }}</a></td><td class="num">{{ a.botlike_score | pct }}</td><td class="num">{{ a.n_tweets }}</td></tr>{% endfor %}
+    </tbody></table>
+    <p><a href="/accounts">All accounts →</a></p>
+    {% else %}<p class="muted">No account scores yet.</p>{% endif %}
+  </div>
+  <div class="card">
+    <h2>Recent runs</h2>
+    <table><thead><tr><th>Started</th><th>Status</th><th class="num">Seen</th><th class="num">New</th></tr></thead><tbody>
+    {% for r in runs %}<tr title="{{ r.reason or '' }}"><td>{{ r.started_at | dt }}</td><td><span class="status status-{{ r.status }}">{{ r.status }}</span> <span class="muted small">{{ r.trigger }}</span></td><td class="num">{{ r.tweets_seen }}</td><td class="num">{{ r.tweets_new }}</td></tr>
+    {% else %}<tr><td colspan="4" class="muted">No runs yet.</td></tr>{% endfor %}
+    </tbody></table>
+    <h3>Jobs</h3>
+    <table><tbody>
+    {% for j in jobs %}<tr><td>{{ j.kind }}</td><td><span class="status status-{{ j.status }}">{{ j.status }}</span></td><td class="small muted">{{ j.message or "" }}</td></tr>
+    {% else %}<tr><td class="muted">No jobs yet.</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+</section>
+
+{% if flagged %}
+<section>
+  <h2>Recently flagged (P(AI) ≥ {{ settings.ai_threshold }})</h2>
+  {% for t in flagged %}{{ tweet_card(t, settings, csrf) }}{% endfor %}
+  <p><a href="/timeline">Timeline →</a></p>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false, "allowEval": false, "allowScriptTags": false}'>
+  <title>{% block title %}tl-ai-detector{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body hx-headers='{"X-CSRF-Token": "{{ csrf }}"}'>
+{% if user %}
+<header class="top">
+  <a class="brand" href="/">tl-ai-detector</a>
+  <nav>
+    {% for href, name in [("/", "Dashboard"), ("/timeline", "Timeline"), ("/accounts", "Accounts"), ("/label", "Label"), ("/model", "Model")] %}
+      <a href="{{ href }}" {% if path == href or (href != "/" and path.startswith(href)) %}class="active" aria-current="page"{% endif %}>{{ name }}</a>
+    {% endfor %}
+  </nav>
+  <form method="post" action="/logout" class="logout">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button class="link">Log out</button>
+  </form>
+</header>
+{% if state and state.status in ("paused", "error") %}
+<div class="banner banner-{{ state.status }}" role="alert">
+  <strong>Scraper {{ state.status }}.</strong> {{ state.reason or "" }}
+  <span class="muted">(since {{ state.updated_at | dt }})</span>
+  <form method="post" action="/scraper/resume" class="inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button>Resume</button>
+  </form>
+  <div class="muted small">Nothing is retried automatically. Fix the cause first (e.g. run <code>tl login</code> locally and copy a fresh session file, or update <code>tl/scraper/selectors.py</code>), then resume.</div>
+</div>
+{% endif %}
+{% endif %}
+<main class="{% block main_class %}{% endblock %}">
+{% block content %}{% endblock %}
+</main>
+<footer class="muted small">Scores are probabilistic and produce false positives. Never treat a score as proof that a person used AI.</footer>
+</body>
+</html>

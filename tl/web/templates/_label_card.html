@@ -1,0 +1,28 @@
+<div class="label-card" id="label-card-inner">
+  {% if flash %}<p class="flash small">{{ flash }}</p>{% endif %}
+  <p class="small muted">{{ label_counts.get("human", 0) }} human · {{ label_counts.get("ai", 0) }} AI · {{ label_counts.get("unsure", 0) }} unsure · {{ counts.unlabeled }} left</p>
+  {% if tweet %}
+  <article class="tweet big">
+    <div class="meta">
+      <strong>@{{ tweet.author_handle }}</strong>
+      <span class="muted small">{{ (tweet.created_at or tweet.first_seen_at) | dt }}</span>
+      {% if tweet.is_reply %}<span class="tag">reply</span>{% endif %}
+      {% if tweet.has_media %}<span class="tag">media</span>{% endif %}
+      {% if show_score and tweet.score is not none %}<span class="spacer"></span><span class="badge">model {{ "%.2f" | format(tweet.score) }}</span>{% endif %}
+    </div>
+    <p class="text">{{ tweet.text }}</p>
+  </article>
+  <form method="post" action="/label" hx-post="/label" hx-target="#label-card" hx-swap="innerHTML" class="label-buttons" id="label-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <input type="hidden" name="tweet_id" value="{{ tweet.id }}">
+    <input type="hidden" name="skip" value="{{ skip }}">
+    <input type="hidden" name="show_score" value="{{ 1 if show_score else 0 }}">
+    <button name="label" value="human" class="big-btn human" data-key="h">Human <kbd>H</kbd></button>
+    <button name="label" value="ai" class="big-btn ai" data-key="a">AI <kbd>A</kbd></button>
+    <button name="label" value="unsure" class="big-btn unsure" data-key="u">Unsure <kbd>U</kbd></button>
+    <button name="label" value="skip" class="big-btn skip" data-key="s">Skip <kbd>S</kbd></button>
+  </form>
+  {% else %}
+  <p class="notice">Nothing left to label. 🎉</p>
+  {% endif %}
+</div>

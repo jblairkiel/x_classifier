@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "_macros.html" import tweet_card %}
+{% block title %}@{{ account.handle }} · tl-ai-detector{% endblock %}
+{% block content %}
+<p><a href="/accounts">← Accounts</a></p>
+<h1>@{{ account.handle }} <span class="muted">{{ account.display_name or "" }}</span></h1>
+<section class="grid">
+  <div class="card">
+    <h2>Botlike score: {% if account.botlike_score is not none %}{{ account.botlike_score | pct }}{% else %}–{% endif %}</h2>
+    <p class="muted small">First seen {{ account.first_seen_at | dt }} · last seen {{ account.last_seen_at | dt }} · features updated {{ account.features_updated_at | dt }}</p>
+    {% if features %}
+    <table>
+      <thead><tr><th>Signal</th><th class="num">Value</th><th class="num">Botlike contribution</th></tr></thead>
+      <tbody>
+      {% for name, sig in features.signals.items() %}
+        <tr title="{{ sig.help }}"><td>{{ sig.label }}</td><td class="num">{{ sig.display }}</td><td class="num">{% if sig.score is not none %}{{ sig.score | pct }} <span class="muted small">× {{ sig.weight }}</span>{% else %}<span class="muted small">n/a</span>{% endif %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="muted small">Based on {{ features.n_tweets }} tweets ({{ features.n_scored }} scored). Confidence: {{ features.confidence }}.</p>
+    {% else %}<p class="muted">Not computed yet. Use "Recompute account scores" on the dashboard.</p>{% endif %}
+  </div>
+</section>
+<h2>Tweets</h2>
+{% for t in tweets %}{{ tweet_card(t, settings, csrf, show_account=false) }}{% else %}<p class="muted">None.</p>{% endfor %}
+{% endblock %}

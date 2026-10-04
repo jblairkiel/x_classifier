@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Label · tl-ai-detector{% endblock %}
+{% block main_class %}narrow{% endblock %}
+{% block content %}
+<h1>Label</h1>
+<p class="muted small">These hand labels are your held-out evaluation set. They are <strong>never</strong> used for training. Judge the text, not the account. Keys: <kbd>H</kbd> human · <kbd>A</kbd> AI · <kbd>U</kbd> unsure · <kbd>S</kbd> skip.
+  {% if show_score %}<a href="/label">Hide model score</a>{% else %}<a href="/label?show_score=1">Show model score</a> (can bias you){% endif %}</p>
+<div id="label-card">{{ card | safe }}</div>
+{% endblock %}

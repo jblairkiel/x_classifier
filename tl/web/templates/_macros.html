@@ -1,0 +1,25 @@
+{% macro score_badge(score, threshold) -%}
+  {%- if score is none -%}<span class="badge muted" title="not scored yet">–</span>
+  {%- else -%}<span class="badge {% if score >= threshold %}hi{% elif score >= 0.5 %}mid{% else %}lo{% endif %}" title="P(AI) from the text model">{{ "%.2f" | format(score) }}</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro tweet_card(t, settings, csrf, show_account=true) -%}
+<article class="tweet">
+  <div class="meta">
+    {% if show_account %}<a href="/accounts/{{ t.author_handle }}"><strong>{{ t.display_name or t.author_handle }}</strong> <span class="muted">@{{ t.author_handle }}</span></a>{% endif %}
+    <span class="muted small">{{ (t.created_at or t.first_seen_at) | dt }}</span>
+    {% if t.is_reply %}<span class="tag">reply</span>{% endif %}
+    {% if t.is_repost %}<span class="tag">repost{% if t.reposted_by %} by {{ t.reposted_by }}{% endif %}</span>{% endif %}
+    {% if t.has_media %}<span class="tag">media</span>{% endif %}
+    <span class="spacer"></span>
+    {{ score_badge(t.score, settings.ai_threshold) }}
+  </div>
+  <p class="text">{{ t.text or "(no text)" }}</p>
+  <div class="foot">
+    <span class="muted small">💬 {{ t.reply_count if t.reply_count is not none else "–" }} · 🔁 {{ t.repost_count if t.repost_count is not none else "–" }} · ♥ {{ t.like_count if t.like_count is not none else "–" }}</span>
+    <span class="spacer"></span>
+    {% include "_label_controls.html" %}
+  </div>
+</article>
+{%- endmacro %}

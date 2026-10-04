@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Accounts · tl-ai-detector{% endblock %}
+{% block content %}
+<h1>Accounts</h1>
+<p class="muted small">Ranked by botlike score: text-model scores combined with account-level signals (cadence, near-duplicate phrasing, reply ratio, hashtag/em-dash rates, length variance). It's a heuristic and needs several tweets per account to mean anything.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Account</th><th class="num">Botlike</th><th class="num">Mean P(AI)</th><th class="num">Max P(AI)</th><th class="num">Tweets</th><th>Last seen</th></tr></thead>
+  <tbody>
+  {% for a in accounts %}
+  <tr>
+    <td><a href="/accounts/{{ a.handle }}"><strong>@{{ a.handle }}</strong></a> <span class="muted small">{{ a.display_name or "" }}</span></td>
+    <td class="num">{% if a.botlike_score is not none %}<span class="badge {% if a.botlike_score >= 0.7 %}hi{% elif a.botlike_score >= 0.5 %}mid{% else %}lo{% endif %}">{{ a.botlike_score | pct }}</span>{% else %}–{% endif %}</td>
+    <td class="num">{{ a.mean_score | num(2) }}</td>
+    <td class="num">{{ a.max_score | num(2) }}</td>
+    <td class="num">{{ a.n_tweets }}</td>
+    <td class="small">{{ a.last_seen_at | dt }}</td>
+  </tr>
+  {% else %}<tr><td colspan="6" class="muted">No accounts yet.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

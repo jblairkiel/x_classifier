@@ -8,11 +8,13 @@
 }
 
 (common) {
+	# defer: applied after the upstream response, replacing (not duplicating) the app's own headers
 	header {
+		defer
 		X-Robots-Tag "noindex, nofollow, noarchive, nosnippet"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
-		Referrer-Policy "no-referrer"
+		Referrer-Policy "same-origin"
 		-Server
 	}
 	request_body {
@@ -34,7 +36,7 @@ http://{$DOMAIN} {
 
 {$DOMAIN} {
 	import common
-	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	header >Strict-Transport-Security "max-age=31536000; includeSubDomains"
 	encode zstd gzip
 	reverse_proxy web:8000
 	log {

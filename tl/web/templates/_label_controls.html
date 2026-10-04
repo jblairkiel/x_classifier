@@ -1,0 +1,9 @@
+{# expects `t` or `tweet` with id + manual_label #}
+{% set tw = t if t is defined else tweet %}
+<form class="relabel" method="post" action="/tweets/{{ tw.id }}/label" hx-post="/tweets/{{ tw.id }}/label" hx-target="this" hx-swap="outerHTML">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+  <span class="small muted">label:</span>
+  {% for value, text in [("human", "Human"), ("ai", "AI"), ("unsure", "Unsure")] %}
+    <button name="label" value="{{ value }}" class="chip{% if tw.manual_label == value %} on chip-{{ value }}{% endif %}" {% if tw.manual_label == value %}aria-pressed="true"{% endif %}>{{ text }}</button>
+  {% endfor %}
+</form>

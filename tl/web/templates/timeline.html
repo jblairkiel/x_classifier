@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "_macros.html" import tweet_card %}
+{% block title %}Timeline · tl-ai-detector{% endblock %}
+{% block content %}
+<h1>Timeline</h1>
+{% if not version %}<p class="notice">No trained model yet, so every tweet is shown unscored. See <a href="/model">Model</a>.</p>{% endif %}
+<form method="get" action="/timeline" class="filters">
+  <label>Min P(AI) <input type="number" name="min_score" step="0.05" min="0" max="1" value="{{ filters.min_score }}"></label>
+  <label>Account <input name="handle" value="{{ filters.handle }}" placeholder="@handle"></label>
+  <label>From <input type="date" name="date_from" value="{{ filters.date_from }}"></label>
+  <label>To <input type="date" name="date_to" value="{{ filters.date_to }}"></label>
+  <label>Label
+    <select name="label">
+      {% for v, t in [("", "any"), ("unlabeled", "unlabeled"), ("human", "human"), ("ai", "ai"), ("unsure", "unsure")] %}
+      <option value="{{ v }}" {% if filters.label == v %}selected{% endif %}>{{ t }}</option>{% endfor %}
+    </select>
+  </label>
+  <button class="primary">Filter</button>
+</form>
+{% for t in tweets %}{{ tweet_card(t, settings, csrf) }}{% else %}<p class="muted">No tweets match.</p>{% endfor %}
+<nav class="pager">
+  {% if page > 1 %}<a href="/timeline?{{ prev_qs }}">← Newer</a>{% endif %}
+  <span class="muted">page {{ page }}</span>
+  {% if has_next %}<a href="/timeline?{{ next_qs }}">Older →</a>{% endif %}
+</nav>
+{% endblock %}

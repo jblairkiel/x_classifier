@@ -281,25 +281,49 @@ def predict(text: str) -> None:
 
 
 @main.command()
-@click.argument("dest", type=click.Path(file_okay=False, path_type=Path))
-@click.option("--models/--no-models", default=True)
-def backup(dest: Path, models: bool) -> None:
-    """Consistent copy of the SQLite DB (+ model checkpoints) into DEST."""
+@click.argument("dest")
+@click.option("--models/--no-models", default=True, help="Include model checkpoints.")
+def backup(dest: str, models: bool) -> None:
+    """Write DB (+ checkpoints) to DEST as .tar.gz; DEST "-" writes to stdout."""
     from tl.ops import backup as _backup
 
-    click.echo(_backup(get_settings(), dest, include_models=models))
+    msg = _backup(get_settings(), dest, include_models=models)
+    click.echo(msg, err=True)
 
 
 @main.command()
-@click.argument("src", type=click.Path(exists=True, file_okay=False, path_type=Path))
-@click.option("--yes", is_flag=True, help="Overwrite without asking.")
-def restore(src: Path, yes: bool) -> None:
-    """Restore a directory produced by `tl backup` (stop web+worker first)."""
+@click.argument("src")
+@click.option("--yes", is_flag=True, help="Do not ask for confirmation.")
+def restore(src: str, yes: bool) -> None:
+    """Restore a `tl backup` archive (SRC "-" reads stdin). Stop web+worker first."""
     from tl.ops import restore as _restore
 
     if not yes:
+        if src == "-":
+            raise click.UsageError("pass --yes when restoring from stdin")
         click.confirm(f"Overwrite the current DB/models with {src}?", abort=True)
-    click.echo(_restore(get_settings(), src))
+    click.echo(_restore(get_settings(), src), err=True)
+
+
+@main.command("install-session")
+def install_session() -> None:
+    """Read a storage-state JSON on stdin and store it in $SECRETS_DIR (used by `make push-session`)."""
+    import os
+
+    raw = click.get_binary_stream("stdin").read()
+    try:
+        state = json.loads(raw)
+        assert isinstance(state.get("cookies"), list)
+    except (ValueError, AssertionError, AttributeError):
+        raise click.ClickException("stdin is not a Playwright storage-state JSON (expected a 'cookies' list)")
+    settings = get_settings()
+    path = settings.storage_state_path
+    tmp = path.with_suffix(".tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "wb") as fh:
+        fh.write(raw)
+    tmp.replace(path)
+    click.echo(f"installed session file ({len(state['cookies'])} cookies) at {path}", err=True)
 
 
 if __name__ == "__main__":
