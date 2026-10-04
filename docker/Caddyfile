@@ -1,0 +1,44 @@
+# Caddy listens unprivileged on 8080/8443; docker-compose maps host 80/443 to them.
+# ACME HTTP-01 / TLS-ALPN challenges arrive on host 80/443 and are handled here.
+{
+	http_port 8080
+	https_port 8443
+	admin off
+	email {$ACME_EMAIL}
+}
+
+(common) {
+	header {
+		X-Robots-Tag "noindex, nofollow, noarchive, nosnippet"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+	request_body {
+		max_size 1MB
+	}
+	handle /robots.txt {
+		header Content-Type "text/plain; charset=utf-8"
+		respond <<TXT
+			User-agent: *
+			Disallow: /
+			TXT 200
+	}
+}
+
+http://{$DOMAIN} {
+	import common
+	redir https://{host}{uri} permanent
+}
+
+{$DOMAIN} {
+	import common
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	encode zstd gzip
+	reverse_proxy web:8000
+	log {
+		output stdout
+		format json
+	}
+}

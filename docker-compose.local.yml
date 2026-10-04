@@ -1,0 +1,16 @@
+# Local testing override: Caddy serves https://localhost with its internal CA on 8443,
+# and the worker can scrape the saved HTML fixtures instead of x.com.
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file .env.local up -d
+services:
+  proxy:
+    environment:
+      DOMAIN: localhost
+      ACME_EMAIL: admin@localhost.invalid
+    ports: !override
+      - "8080:8080"
+      - "8443:8443"
+  worker:
+    environment:
+      SCRAPE_ENABLED: "false"     # no schedule; run fixture scrapes by hand
+    volumes:
+      - ./tests/fixtures:/fixtures:ro

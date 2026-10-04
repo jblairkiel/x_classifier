@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tl-ai-detector"
+version = "0.1.0"
+description = "Read-only X home-timeline reader that scores tweets as likely AI-generated or human-written."
+requires-python = ">=3.11"
+dependencies = [
+  "click==8.5.0",
+  "numpy==2.4.6",
+]
+
+[project.optional-dependencies]
+web = [
+  "fastapi==0.142.2",
+  "uvicorn[standard]==0.54.0",
+  "jinja2==3.1.6",
+  "argon2-cffi==25.1.0",
+  "itsdangerous==2.2.0",
+  "python-multipart==0.0.32",
+]
+scraper = [
+  "playwright==1.56.0",
+  "beautifulsoup4==4.15.0",
+]
+# torch is installed separately (CPU or CUDA wheel index), see docker/ and README
+ml = [
+  "transformers==5.18.0",
+  "safetensors",
+]
+dev = ["pytest==9.1.1", "httpx==0.28.1"]
+
+[project.scripts]
+tl = "tl.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["tl*"]
+
+[tool.setuptools.package-data]
+"tl" = ["db/schema.sql", "web/templates/*.html", "web/templates/**/*.html", "web/static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

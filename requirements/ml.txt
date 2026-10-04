@@ -1,0 +1,5 @@
+# Inference/training deps. torch itself is installed from the PyTorch index (CPU or CUDA) in the Dockerfiles.
+transformers==5.18.0
+tokenizers==0.23.2
+safetensors==0.8.0
+huggingface-hub==1.33.0

@@ -1,0 +1,11 @@
+# Web container: FastAPI UI only. No browser, no torch.
+click==8.5.0
+numpy==2.4.6
+fastapi==0.142.2
+starlette==1.7.0
+pydantic==2.13.5
+uvicorn[standard]==0.54.0
+jinja2==3.1.6
+argon2-cffi==25.1.0
+itsdangerous==2.2.0
+python-multipart==0.0.32

@@ -1,0 +1,9 @@
+# Only code goes into images. Never session files, .env, data or models.
+**
+!pyproject.toml
+!README.md
+!requirements/**
+!tl/**
+!docker/Caddyfile
+**/__pycache__
+**/*.pyc

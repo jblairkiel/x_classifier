@@ -1,0 +1,162 @@
+name: tl-ai-detector
+
+# Only `proxy` publishes ports. `web` has no internet access at all (internal network);
+# `worker` gets outbound internet (to reach x.com) but no published ports.
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    image: tl-ai-detector-web:${TL_IMAGE_TAG:-latest}
+    <<: *hardening
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+      MODELS_DIR: /models
+      SECRETS_DIR: /nonexistent   # the web container never sees the X session file
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    volumes:
+      - tl_data:/data
+      - tl_models:/models:ro
+    networks: [edge]
+    expose: ["8000"]
+    restart: unless-stopped
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+      args:
+        WITH_TORCH: ${WORKER_WITH_TORCH:-1}
+    image: tl-ai-detector-worker:${TL_IMAGE_TAG:-latest}
+    <<: *hardening
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+      MODELS_DIR: /models
+      SECRETS_DIR: /secrets
+      HEADLESS: "true"
+    tmpfs:
+      - /tmp:rw,nosuid,size=512m   # Chromium profile + caches
+    shm_size: "1gb"
+    volumes:
+      - tl_data:/data
+      - tl_models:/models:ro
+      - tl_secrets:/secrets:ro
+    networks: [worker_egress]
+    restart: unless-stopped
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "tl", "worker-health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+  proxy:
+    build:
+      context: .
+      dockerfile: docker/caddy.Dockerfile
+    image: tl-ai-detector-proxy:${TL_IMAGE_TAG:-latest}
+    <<: *hardening
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    ports:
+      - "80:8080"
+      - "443:8443"
+      - "443:8443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge, proxy_egress]
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *logging
+
+  # ---- opt-in: training (CPU by default; GPU via docker-compose.gpu.yml) -----------------
+  train:
+    profiles: ["train"]
+    build:
+      context: .
+      dockerfile: docker/train.Dockerfile
+      args:
+        TORCH_INDEX_URL: ${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cpu}
+    image: tl-ai-detector-train:${TL_IMAGE_TAG:-latest}
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+      MODELS_DIR: /models
+      HF_HOME: /hf
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    shm_size: "2gb"
+    volumes:
+      - tl_data:/data
+      - tl_models:/models
+      - hf_cache:/hf
+    logging: *logging
+
+  # ---- opt-in: maintenance (backup / restore / pushing the session file) ------------------
+  ops:
+    profiles: ["ops"]
+    image: tl-ai-detector-web:${TL_IMAGE_TAG:-latest}
+    <<: *hardening
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+      MODELS_DIR: /models
+      SECRETS_DIR: /secrets
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=512m
+    volumes:
+      - tl_data:/data
+      - tl_models:/models
+      - tl_secrets:/secrets
+    network_mode: none
+    entrypoint: ["tl"]
+    logging: *logging
+
+networks:
+  edge:
+    internal: true
+  proxy_egress: {}
+  worker_egress: {}
+
+volumes:
+  tl_data:
+    name: tl_data
+  tl_models:
+    name: tl_models
+  tl_secrets:
+    name: tl_secrets
+  caddy_data:
+    name: tl_caddy_data
+  caddy_config:
+    name: tl_caddy_config
+  hf_cache:
+    name: tl_hf_cache
