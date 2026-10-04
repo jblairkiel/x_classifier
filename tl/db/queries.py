@@ -95,7 +95,7 @@ def get_account(conn: sqlite3.Connection, handle: str) -> sqlite3.Row | None:
 def set_account_features(conn: sqlite3.Connection, handle: str, score: float | None, features: dict) -> None:
     conn.execute(
         "UPDATE accounts SET botlike_score = ?, features_json = ?, features_updated_at = ? WHERE handle = ?",
-        (score, json.dumps(features, sort_keys=True), now_iso(), handle),
+        (score, json.dumps(features), now_iso(), handle),
     )
 
 
